@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>گردونه و نمرات</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--text:#1d1d1b;--muted:#6b6a64;--line:#e2e0d8;--accent:#2f6fed;--accent-t:#fff;--good:#1f9d55;--bad:#d64545;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16161a;--card:#202027;--text:#f0efe9;--muted:#9c9a92;--line:#34343d;--accent:#5b8cff;--accent-t:#0b0b0f;--good:#3ecf7a;--bad:#ff6b6b}}
+:root[data-theme="dark"]{--bg:#16161a;--card:#202027;--text:#f0efe9;--muted:#9c9a92;--line:#34343d;--accent:#5b8cff;--accent-t:#0b0b0f;--good:#3ecf7a;--bad:#ff6b6b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Vazirmatn,Tahoma,"Segoe UI",sans-serif;line-height:1.6}
+.wrap{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:1.3rem;margin:8px 0 14px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tab{flex:1;padding:10px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;font:inherit;cursor:pointer}
+.tab.on{background:var(--accent);color:var(--accent-t);border-color:var(--accent);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+h2{font-size:1rem;margin:0 0 10px}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+input,select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);min-width:0}
+input[type=text]{flex:1}
+input[type=number]{width:72px}
+button{font:inherit;cursor:pointer}
+.btn{padding:8px 14px;border:0;border-radius:8px;background:var(--accent);color:var(--accent-t);font-weight:700}
+.btn.sm{padding:4px 10px;background:var(--bg);color:var(--text);border:1px solid var(--line);font-weight:400}
+.btn.del{color:var(--bad)}
+.item{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.item .name{flex:1;min-width:0;overflow-wrap:anywhere}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.pct{color:var(--muted);font-size:.85rem;min-width:44px;text-align:left}
+.pos{min-width:28px;text-align:center;font-weight:700;color:var(--good)}
+.muted{color:var(--muted);font-size:.85rem}
+.stage{position:relative;max-width:420px;margin:0 auto}
+canvas{width:100%;height:auto;display:block}
+.pointer{position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:28px solid var(--text);z-index:2}
+.spin{display:block;margin:14px auto 0;font-size:1.1rem;padding:10px 36px}
+.spin:disabled{opacity:.5}
+.result{text-align:center;margin-top:14px;min-height:64px}
+.result b{font-size:1.5rem}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎡 گردونه و نمرات</h1>
+  <div class="tabs">
+    <button class="tab on" data-tab="wheel">گردونه</button>
+    <button class="tab" data-tab="grades">نمرات</button>
+  </div>
+
+  <section id="wheel">
+    <div class="card">
+      <div class="stage"><div class="pointer"></div><canvas id="cv" width="400" height="400"></canvas></div>
+      <button class="btn spin" id="spin">بچرخون!</button>
+      <div class="result" id="result"></div>
+    </div>
+    <div class="card">
+      <h2>گزینه‌های گردونه (غیر از دانش‌آموزان)</h2>
+      <div class="muted" style="margin-bottom:8px">عدد «شانس» وزن هر گزینه است؛ هرچه بیشتر، برش بزرگ‌تر.</div>
+      <div id="extras"></div>
+      <div class="row" style="margin-top:10px">
+        <input type="text" id="exName" placeholder="گزینه جدید...">
+        <input type="number" id="exW" value="1" min="0" step="0.5" title="شانس">
+        <button class="btn" id="exAdd">افزودن</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="grades" class="hide">
+    <div class="card">
+      <h2>روش محاسبه شانس دانش‌آموزان</h2>
+      <select id="mode">
+        <option value="low">هرکه مثبت کمتر دارد، شانس بیشتر</option>
+        <option value="high">هرکه مثبت بیشتر دارد، شانس بیشتر</option>
+      </select>
+    </div>
+    <div class="card">
+      <h2>دانش‌آموزان</h2>
+      <div class="row"><label class="btn" style="cursor:pointer">📂 وارد کردن از اکسل<input type="file" id="xl" accept=".xlsx,.xls,.csv,.txt" hidden></label>
+        <select id="impMode"><option value="replace">جایگزین لیست فعلی</option><option value="add">اضافه به لیست فعلی</option></select></div>
+      <div class="muted" id="impMsg" style="margin-bottom:8px">فرمت فایل: یک ستون؛ در هر خانه اول نام، بعد فاصله، بعد نمره. مثال: علی رضایی 3</div>
+      <div id="students"></div>
+      <div class="row" style="margin-top:10px">
+        <input type="text" id="stName" placeholder="نام دانش‌آموز...">
+        <button class="btn" id="stAdd">افزودن</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const PAL=['#e4572e','#17bebb','#ffc914','#76b041','#8d5fd3','#ef8354','#3a86ff','#d1495b','#00a896','#f4a261'];
+const DEF=[
+  {id:'e1',name:'شصت طلایی',w:1,color:'#d4a017'},
+  {id:'e2',name:'قهوه‌ای',w:1,color:'#8b5a2b'},
+  {id:'e3',name:'ادویه‌ای',w:1,color:'#e07a1f'},
+  {id:'e4',name:'پوچ',w:1,color:'#8a8a8a'},
+  {id:'e5',name:'دو مثبت',w:1,color:'#2e9e5b'}
+];
+let S={students:[],extras:DEF.map(x=>({...x})),mode:'low'};
+try{const r=localStorage.getItem('wheel-app-v1');if(r){const p=JSON.parse(r);if(p&&p.students&&p.extras)S=p}}catch(e){}
+function save(){try{localStorage.setItem('wheel-app-v1',JSON.stringify(S))}catch(e){}}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const fa=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+
+function entries(){
+  const mx=Math.max(0,...S.students.map(s=>s.pos));
+  const out=S.students.map((s,i)=>({id:s.id,type:'s',label:s.name,color:PAL[i%PAL.length],
+    w:S.mode==='low'?(mx-s.pos+1):(s.pos+1)}));
+  S.extras.forEach(x=>{if(x.w>0)out.push({id:x.id,type:'x',label:x.name,color:x.color,w:+x.w})});
+  return out;
+}
+function pctOf(id){
+  const e=entries(),t=e.reduce((a,b)=>a+b.w,0),f=e.find(x=>x.id===id);
+  return f&&t?fa(Math.round(f.w/t*1000)/10)+'٪':'۰٪';
+}
+
+let rot=0,spinning=false,lastWinner=null;
+const cv=$('cv'),ctx=cv.getContext('2d');
+function draw(){
+  const dpr=window.devicePixelRatio||1,size=Math.min(cv.parentElement.clientWidth||400,420);
+  cv.width=size*dpr;cv.height=size*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const c=size/2,R=c-6,e=entries(),t=e.reduce((a,b)=>a+b.w,0);
+  ctx.clearRect(0,0,size,size);
+  if(!t){ctx.fillStyle='#888';ctx.font='16px Vazirmatn,Tahoma';ctx.textAlign='center';ctx.fillText('گزینه‌ای وجود ندارد',c,c);return}
+  let a=rot;
+  e.forEach(x=>{
+    const w=x.w/t*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(c,c);ctx.arc(c,c,R,a,a+w);ctx.closePath();
+    ctx.fillStyle=x.color;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=2;ctx.stroke();
+    if(w>0.12){
+      ctx.save();ctx.translate(c,c);ctx.rotate(a+w/2);
+      ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=3;
+      ctx.font='700 '+Math.max(11,Math.min(16,size/24))+'px Vazirmatn,Tahoma';
+      ctx.textAlign='right';ctx.textBaseline='middle';
+      ctx.fillText(x.label.length>14?x.label.slice(0,13)+'…':x.label,R-12,0);
+      ctx.restore();
+    }
+    a+=w;
+  });
+  ctx.beginPath();ctx.arc(c,c,16,0,7);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#999';ctx.lineWidth=2;ctx.stroke();
+}
+
+function spin(){
+  const e=entries(),t=e.reduce((a,b)=>a+b.w,0);
+  if(spinning||!t)return;
+  let r=Math.random()*t,i=0,start=0;
+  for(;i<e.length;i++){if(r<e[i].w)break;r-=e[i].w;start+=e[i].w}
+  if(i>=e.length){i=e.length-1}
+  const win=e[i],mid=(start+win.w*(0.15+0.7*Math.random()))/t*Math.PI*2;
+  const TAU=Math.PI*2,target=-Math.PI/2-mid;
+  const delta=(((target-rot)%TAU)+TAU)%TAU+TAU*6;
+  const from=rot,dur=4800,t0=performance.now();
+  spinning=true;$('spin').disabled=true;$('result').innerHTML='';
+  (function step(now){
+    const p=Math.min(1,(now-t0)/dur),k=1-Math.pow(1-p,4);
+    rot=from+delta*k;draw();
+    if(p<1)requestAnimationFrame(step);
+    else{spinning=false;$('spin').disabled=false;showResult(win)}
+  })(t0);
+}
+function showResult(w){
+  lastWinner=w;
+  let h='<div class="muted">برنده:</div><b style="color:'+w.color+'">'+esc(w.label)+'</b>';
+  if(w.type==='s')h+='<div style="margin-top:8px"><button class="btn sm" id="plus">+۱ مثبت برای '+esc(w.label)+'</button></div>';
+  $('result').innerHTML=h;
+}
+
+function renderExtras(){
+  $('extras').innerHTML=S.extras.map(x=>'<div class="item" data-id="'+x.id+'"><span class="dot" style="background:'+x.color+'"></span><span class="name">'+esc(x.name)+'</span>'
+   +'<span class="pct">'+pctOf(x.id)+'</span><input type="number" min="0" step="0.5" value="'+x.w+'" data-act="xw" title="شانس">'
+   +'<button class="btn sm del" data-act="xdel">حذف</button></div>').join('')||'<div class="muted">گزینه‌ای نیست.</div>';
+}
+function renderStudents(){
+  $('students').innerHTML=S.students.map(s=>'<div class="item" data-id="'+s.id+'"><span class="name">'+esc(s.name)+'</span>'
+   +'<span class="pct">'+pctOf(s.id)+'</span>'
+   +'<button class="btn sm" data-act="minus">−</button><span class="pos">'+fa(s.pos)+'</span><button class="btn sm" data-act="plus">+</button>'
+   +'<button class="btn sm del" data-act="sdel">حذف</button></div>').join('')||'<div class="muted">هنوز دانش‌آموزی اضافه نشده.</div>';
+}
+function all(){renderExtras();renderStudents();draw();save()}
+
+document.addEventListener('click',ev=>{
+  const tb=ev.target.closest('.tab');
+  if(tb){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b===tb));
+    ['wheel','grades'].forEach(id=>$(id).classList.toggle('hide',id!==tb.dataset.tab));
+    if(tb.dataset.tab==='wheel')draw();return}
+  if(ev.target.id==='plus'&&lastWinner){const s=S.students.find(x=>x.id===lastWinner.id);if(s){s.pos++;all();$('result').innerHTML+='<div class="muted" style="margin-top:6px">ثبت شد ✓</div>';$('plus')&&($('plus').disabled=true)}return}
+  const b=ev.target.closest('[data-act]');if(!b||b.tagName==='INPUT')return;
+  const id=b.closest('.item').dataset.id,act=b.dataset.act;
+  if(act==='plus'||act==='minus'){const s=S.students.find(x=>x.id===id);s.pos=Math.max(0,s.pos+(act==='plus'?1:-1))}
+  if(act==='sdel')S.students=S.students.filter(x=>x.id!==id);
+  if(act==='xdel')S.extras=S.extras.filter(x=>x.id!==id);
+  all();
+});
+document.addEventListener('change',ev=>{
+  const i=ev.target;
+  if(i.dataset&&i.dataset.act==='xw'){const x=S.extras.find(z=>z.id===i.closest('.item').dataset.id);x.w=Math.max(0,parseFloat(i.value)||0);all()}
+});
+$('spin').onclick=spin;
+$('mode').value=S.mode;
+$('mode').onchange=e=>{S.mode=e.target.value;all()};
+function addStudent(){const v=$('stName').value.trim();if(!v)return;S.students.push({id:uid(),name:v,pos:0});$('stName').value='';all()}
+function addExtra(){const v=$('exName').value.trim();if(!v)return;S.extras.push({id:uid(),name:v,w:Math.max(0,parseFloat($('exW').value)||1),color:PAL[S.extras.length%PAL.length]});$('exName').value='';all()}
+$('stAdd').onclick=addStudent;$('exAdd').onclick=addExtra;
+$('stName').onkeydown=e=>{if(e.key==='Enter')addStudent()};
+$('exName').onkeydown=e=>{if(e.key==='Enter')addExtra()};
+const nd=s=>String(s).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+function parseLine(t){
+  t=nd(t).replace(/\s+/g,' ').trim();if(!t)return null;
+  const m=t.match(/^(.*\S)\s+(-?\d+(?:[.,]\d+)?)$/);
+  if(m)return{name:m[1],pos:Math.max(0,Math.round(parseFloat(m[2].replace(',','.'))))};
+  return{name:t,pos:0};
+}
+function applyImport(lines){
+  const list=lines.map(parseLine).filter(Boolean);
+  if(!list.length){$('impMsg').textContent='چیزی پیدا نشد. فرمت: اول نام، بعد فاصله، بعد نمره.';return}
+  if($('impMode').value==='replace')S.students=[];
+  list.forEach(x=>{const e=S.students.find(s=>s.name===x.name);if(e)e.pos=x.pos;else S.students.push({id:uid(),name:x.name,pos:x.pos})});
+  all();
+  $('impMsg').textContent='✓ '+fa(list.length)+' نفر وارد شد.';
+}
+$('xl').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    if(/\.(xlsx|xls)$/i.test(f.name)){
+      if(typeof XLSX==='undefined'){$('impMsg').textContent='کتابخانه‌ی اکسل بارگذاری نشد (اینترنت یا فیلتر). فایل را به‌صورت CSV یا TXT ذخیره کنید.';return}
+      const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+      applyImport(rows.map(r=>r.filter(v=>v!==''&&v!=null).join(' ')));
+    }else{
+      const tx=await f.text();
+      applyImport(tx.split(/\r?\n/).map(l=>l.replace(/[,;\t]/g,' ')));
+    }
+  }catch(err){$('impMsg').textContent='خواندن فایل ناموفق بود.'}
+  e.target.value='';
+};
+window.addEventListener('resize',draw);
+all();
+</script>
+</body>
+</html>
